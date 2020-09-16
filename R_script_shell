@@ -1,0 +1,53 @@
+.libPaths('/data2/gyd/R/x86_64-redhat-linux-gnu-library/3.6')
+library(argparse)
+library(infercnv)
+
+
+packageVersion("infercnv")
+
+parser = ArgumentParser()
+parser$add_argument("--raw_counts_matrix", help="could be compress format")
+parser$add_argument("--annotations_file")
+parser$add_argument("--gene_order_file")
+parser$add_argument("--outdir",default="./")
+parser$add_argument("--cutoff",default="1")
+parser$add_argument("--window_length",default="101")
+parser$add_argument("--ref_group_names",required=TRUE, help="if multiple refs, use ',' to split")
+parser$add_argument("--num_threads",default="20")
+
+args <- parser$parse_args()
+
+args$cutoff <- as.numeric(args$cutoff)
+args$num_threads <- as.numeric(args$num_threads)
+args$window_length <- as.numeric(args$window_length)
+outdir <- args$outdir # object of type 'closure' is not subsettable
+
+if (!dir.exists(outdir)){
+  dir.create(outdir)
+}
+
+if (!is.null(args$ref_group_names)) {
+    args$ref_group_names = strsplit(args$ref_group_names, ",")[[1]]
+}
+
+
+
+#------------------------------create infercnv object------------
+infercnv_obj = CreateInfercnvObject(raw_counts_matrix=args$raw_counts_matrix,
+                                    annotations_file=args$annotations_file,
+                                    delim="\t",
+                                    gene_order_file=args$gene_order_file,
+                                    ref_group_names=args$ref_group_names)
+
+
+# perform infercnv operations to reveal cnv signal
+infercnv_obj = infercnv::run(infercnv_obj,
+                             cutoff=args$cutoff, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
+                             out_dir=outdir,
+                             cluster_by_groups=TRUE,
+                             plot_steps=FALSE,
+                             denoise=TRUE,
+                             HMM=TRUE,
+                             window_length=args$window_length
+                             )
+							 
